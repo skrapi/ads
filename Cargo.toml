@@ -1,7 +1,7 @@
 [package]
 name = "ads"
 version = "0.1.0"
-authors = ["Sylvan <sylvan.j.morris@gmail.com>"]
+authors = ["Sylvan <sylvan@hey.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
