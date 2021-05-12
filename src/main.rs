@@ -68,50 +68,66 @@ impl Question {
     }
 }
 
+#[derive(PartialEq)]
+enum Area {
+    Greeting,
+    Testing,
+    Completed,
+    Exit,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = TestType::from_args();
-    let stdin = stdin();
-    let mut stdout = MouseTerminal::from(stdout().into_raw_mode()?);
+    let mut stdin = termion::async_stdin().keys();
+    let mut stdout = stdout().into_raw_mode().unwrap();
 
-    let hello_message = format!(
-        "{}{}{}Hello, you have selected: {}\
-    {}Use <q> to exit \
-    {}Use arrow keys to move around\
-    {}Press ENTER to begin",
-        termion::clear::All,
-        termion::cursor::Hide,
-        termion::cursor::Goto(1, 1),
-        args,
-        termion::cursor::Goto(1, 2),
-        termion::cursor::Goto(1, 3),
-        termion::cursor::Goto(1, 4),
-    );
-    write!(stdout, "{}", hello_message)?;
+    let mut area = Area::Greeting;
 
-    stdout.flush()?;
+    while area != Area::Exit {
+        let input = stdin.next();
 
-    let mut current_answer = Answer::One;
+        if let Some(Ok(key)) = input {
+            match area {
+                Area::Greeting => {
+                    let hello_message = format!(
+                        "{}{}{}Hello, you have selected: {}\
+                    {}Use <q> to exit \
+                    {}Use arrow keys to move around\
+                    {}Press ENTER to begin",
+                        termion::clear::All,
+                        termion::cursor::Hide,
+                        termion::cursor::Goto(1, 1),
+                        args,
+                        termion::cursor::Goto(1, 2),
+                        termion::cursor::Goto(1, 3),
+                        termion::cursor::Goto(1, 4),
+                    );
+                    write!(stdout, "{}", hello_message)?;
 
-    for character in stdin.events() {
-        let event = character?;
-        match event {
-            Event::Key(Key::Char('\n')) => {
-                write!(stdout, "{}", Question::generate(current_answer))?
+                    stdout.flush()?;
+
+                    let mut current_answer = Answer::One;
+
+                    match key {
+                        Key::Char('\n') => {
+                            write!(stdout, "{}", Question::generate(current_answer))?
+                        }
+                        Event::Key(Key::Down) => {
+                            current_answer.increment();
+                            write!(stdout, "{}", Question::generate(current_answer))?
+                        }
+                        Event::Key(Key::Up) => {
+                            current_answer.decrement();
+                            write!(stdout, "{}", Question::generate(current_answer))?
+                        }
+                        Event::Key(Key::Char('q')) => break,
+                        _ => {}
+                    }
+                    stdout.flush()?;
+                }
             }
-            Event::Key(Key::Down) => {
-                current_answer.increment();
-                write!(stdout, "{}", Question::generate(current_answer))?
-            }
-            Event::Key(Key::Up) => {
-                current_answer.decrement();
-                write!(stdout, "{}", Question::generate(current_answer))?
-            }
-            Event::Key(Key::Char('q')) => break,
-            _ => {}
         }
-        stdout.flush()?;
     }
-
     // Clean up
 
     write!(

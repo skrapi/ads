@@ -13,7 +13,6 @@ impl Display for TimeComplexity {
             TimeComplexity::ConstantTime => write!(f, "Constant Time O(1)"),
             TimeComplexity::LinearTime => write!(f, "Linear Time O(n)"),
             TimeComplexity::LogarithmicTime => write!(f, "Logarithmic Time O(log n)"),
-            _ => write!(f, "Invalid time complexity"),
         }
     }
 }
