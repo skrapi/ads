@@ -83,48 +83,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut area = Area::Greeting;
 
-    while area != Area::Exit {
-        let input = stdin.next();
-
-        if let Some(Ok(key)) = input {
-            match area {
-                Area::Greeting => {
-                    let hello_message = format!(
-                        "{}{}{}Hello, you have selected: {}\
+    let hello_message = format!(
+        "{}{}{}Hello, you have selected: {}\
                     {}Use <q> to exit \
                     {}Use arrow keys to move around\
                     {}Press ENTER to begin",
-                        termion::clear::All,
-                        termion::cursor::Hide,
-                        termion::cursor::Goto(1, 1),
-                        args,
-                        termion::cursor::Goto(1, 2),
-                        termion::cursor::Goto(1, 3),
-                        termion::cursor::Goto(1, 4),
-                    );
-                    write!(stdout, "{}", hello_message)?;
+        termion::clear::All,
+        termion::cursor::Hide,
+        termion::cursor::Goto(1, 1),
+        args,
+        termion::cursor::Goto(1, 2),
+        termion::cursor::Goto(1, 3),
+        termion::cursor::Goto(1, 4),
+    );
+    write!(stdout, "{}", hello_message)?;
 
-                    stdout.flush()?;
+    stdout.flush()?;
 
+    while area != Area::Exit {
+        if let Some(Ok(key)) = stdin.next() {
+            match area {
+                Area::Greeting => match key {
+                    Key::Char('\n') => {
+                        area = Area::Testing;
+                        write!(stdout, "{}", Question::generate(Answer::One))?;
+                        stdout.flush()?;
+                    }
+                    Key::Char('q') => area = Area::Exit,
+                    _ => {}
+                },
+                Area::Testing => {
                     let mut current_answer = Answer::One;
 
                     match key {
                         Key::Char('\n') => {
                             write!(stdout, "{}", Question::generate(current_answer))?
                         }
-                        Event::Key(Key::Down) => {
+                        Key::Down => {
                             current_answer.increment();
                             write!(stdout, "{}", Question::generate(current_answer))?
                         }
-                        Event::Key(Key::Up) => {
+                        Key::Up => {
                             current_answer.decrement();
                             write!(stdout, "{}", Question::generate(current_answer))?
                         }
-                        Event::Key(Key::Char('q')) => break,
-                        _ => {}
+                        Key::Char('q') => area = Area::Exit,
+                        _ => write!(stdout, "{:?}", key)?,
                     }
+
                     stdout.flush()?;
                 }
+                _ => {}
             }
         }
     }
