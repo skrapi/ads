@@ -1,3 +1,4 @@
+mod answers;
 use std::fmt::Display;
 use std::io::{stdin, stdout, Write};
 
@@ -7,18 +8,63 @@ use termion::raw::IntoRawMode;
 
 use structopt::StructOpt;
 
+use answers::{Answer, TimeComplexity};
+
 /// Defines that type of test
 #[derive(Debug, StructOpt)]
 enum TestType {
     /// Selects all tests
     All,
+    LinkedLists,
 }
 
 impl Display for TestType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TestType::All => write!(f, "Test all subject matter"),
+            TestType::LinkedLists => write!(f, "Testing linked list knowledge"),
         }
+    }
+}
+
+struct Question;
+
+impl Question {
+    fn generate(selection: Answer) -> String {
+        let possible_answers = vec![
+            TimeComplexity::ConstantTime,
+            TimeComplexity::LogarithmicTime,
+            TimeComplexity::LinearTime,
+        ];
+
+        let selected_answer = match selection {
+            Answer::One => [">", " ", " "],
+            Answer::Two => [" ", ">", " "],
+            Answer::Three => [" ", " ", ">"],
+        };
+
+        let question =
+            "What is the time complexity for inserting an element at the head of a linked list?";
+
+        format!(
+            "{}{}{}Question: {}\
+            {} {} 1. {}\
+            {} {} 2. {}\
+            {} {} 3. {}",
+            termion::clear::All,
+            termion::cursor::Hide,
+            termion::cursor::Goto(1, 1),
+            question,
+            termion::cursor::Goto(1, 2),
+            selected_answer[0],
+            possible_answers[0],
+            termion::cursor::Goto(1, 3),
+            selected_answer[1],
+            possible_answers[1],
+            termion::cursor::Goto(1, 4),
+            selected_answer[2],
+            possible_answers[2]
+        )
     }
 }
 
@@ -27,12 +73,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdin = stdin();
     let mut stdout = MouseTerminal::from(stdout().into_raw_mode()?);
 
-    write!(
-        stdout,
+    let hello_message = format!(
         "{}{}{}Hello, you have selected: {}\
-        {}Use <q> to exit \
-        {}Use arrow keys to move around\
-        {}Press ENTER to begin",
+    {}Use <q> to exit \
+    {}Use arrow keys to move around\
+    {}Press ENTER to begin",
         termion::clear::All,
         termion::cursor::Hide,
         termion::cursor::Goto(1, 1),
@@ -40,52 +85,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         termion::cursor::Goto(1, 2),
         termion::cursor::Goto(1, 3),
         termion::cursor::Goto(1, 4),
-    )?;
+    );
+    write!(stdout, "{}", hello_message)?;
 
     stdout.flush()?;
 
-    // while let Some(begin_character) = stdin.events().next()? {}
+    let mut current_answer = Answer::One;
 
     for character in stdin.events() {
         let event = character?;
         match event {
+            Event::Key(Key::Char('\n')) => {
+                write!(stdout, "{}", Question::generate(current_answer))?
+            }
+            Event::Key(Key::Down) => {
+                current_answer.increment();
+                write!(stdout, "{}", Question::generate(current_answer))?
+            }
+            Event::Key(Key::Up) => {
+                current_answer.decrement();
+                write!(stdout, "{}", Question::generate(current_answer))?
+            }
             Event::Key(Key::Char('q')) => break,
-            Event::Key(Key::Down) => write!(
-                stdout,
-                "{}{}Down",
-                termion::clear::All,
-                termion::cursor::Goto(1, 1)
-            )?,
-            Event::Key(Key::Up) => write!(
-                stdout,
-                "{}{}Up",
-                termion::clear::All,
-                termion::cursor::Goto(1, 1)
-            )?,
-            Event::Key(Key::Left) => write!(
-                stdout,
-                "{}{}Left",
-                termion::clear::All,
-                termion::cursor::Goto(1, 1)
-            )?,
-            Event::Key(Key::Right) => write!(
-                stdout,
-                "{}{}Right",
-                termion::clear::All,
-                termion::cursor::Goto(1, 1)
-            )?,
             _ => {}
         }
         stdout.flush()?;
     }
 
+    // Clean up
+
     write!(
         stdout,
-        "{}{}{}Bye\n",
+        "{}{}{}",
         termion::clear::All,
         termion::cursor::Goto(1, 1),
         termion::cursor::Show
     )?;
+
+    stdout.flush()?;
 
     Ok(())
 }
