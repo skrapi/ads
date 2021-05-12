@@ -1,18 +1,14 @@
-use std::{
-    fmt::Display,
-    io::{BufRead, StdoutLock},
-    thread::sleep,
-};
-
+use std::fmt::Display;
 use std::io::{stdin, stdout, Write};
 
-use std::time::Duration;
-
-use termion::event::{Event, Key, MouseEvent};
+use termion::event::{Event, Key};
 use termion::input::{MouseTerminal, TermRead};
 use termion::raw::IntoRawMode;
 
+use structopt::StructOpt;
+
 /// Defines that type of test
+#[derive(Debug, StructOpt)]
 enum TestType {
     /// Selects all tests
     All,
@@ -21,41 +17,34 @@ enum TestType {
 impl Display for TestType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestType::All => write!(f, "All tests"),
+            TestType::All => write!(f, "Test all subject matter"),
         }
     }
 }
 
-fn clear_terminal(stdout_handle: &mut StdoutLock) -> Result<(), Box<dyn std::error::Error>> {
-    let mut clear_character = Vec::new();
-    write!(clear_character, "{esc}c", esc = 27 as char)?;
-    stdout_handle.write_all(&clear_character)?;
-    Ok(())
-}
-
-fn write_to_terminal(
-    stdout_handle: &mut StdoutLock,
-    buf: Vec<u8>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    clear_terminal(stdout_handle)?;
-    stdout_handle.write_all(&buf)?;
-
-    Ok(())
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = TestType::from_args();
     let stdin = stdin();
-    let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
+    let mut stdout = MouseTerminal::from(stdout().into_raw_mode()?);
 
     write!(
         stdout,
-        "{}{}{}Hello, q to exit, arrow keys to move around",
+        "{}{}{}Hello, you have selected: {}\
+        {}Use <q> to exit \
+        {}Use arrow keys to move around\
+        {}Press ENTER to begin",
         termion::clear::All,
+        termion::cursor::Hide,
         termion::cursor::Goto(1, 1),
-        termion::cursor::Hide
-    )
-    .unwrap();
-    stdout.flush().unwrap();
+        args,
+        termion::cursor::Goto(1, 2),
+        termion::cursor::Goto(1, 3),
+        termion::cursor::Goto(1, 4),
+    )?;
+
+    stdout.flush()?;
+
+    // while let Some(begin_character) = stdin.events().next()? {}
 
     for character in stdin.events() {
         let event = character?;
@@ -87,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )?,
             _ => {}
         }
-        stdout.flush().unwrap();
+        stdout.flush()?;
     }
 
     write!(
