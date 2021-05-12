@@ -8,6 +8,10 @@ use std::io::{stdin, stdout, Write};
 
 use std::time::Duration;
 
+use termion::event::{Event, Key, MouseEvent};
+use termion::input::{MouseTerminal, TermRead};
+use termion::raw::IntoRawMode;
+
 /// Defines that type of test
 enum TestType {
     /// Selects all tests
@@ -41,23 +45,58 @@ fn write_to_terminal(
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdin = stdin();
-    let stdout = stdout();
-    let mut handle_stdout = stdout.lock();
-    let mut handle_stdin = stdin.lock();
+    let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
 
-    handle_stdout.write_all(b"Hello\n").unwrap();
-    handle_stdout.flush()?;
+    write!(
+        stdout,
+        "{}{}{}Hello, q to exit, arrow keys to move around",
+        termion::clear::All,
+        termion::cursor::Goto(1, 1),
+        termion::cursor::Hide
+    )
+    .unwrap();
+    stdout.flush().unwrap();
 
-    for n in 0..10 {
-        let mut buf = Vec::new();
-        let mut read = String::new();
-        write!(buf, "{}\n", n)?;
-        write_to_terminal(&mut handle_stdout, buf)?;
-        handle_stdin.read_line(&mut read)?;
-        println!("{}", read);
+    for character in stdin.events() {
+        let event = character?;
+        match event {
+            Event::Key(Key::Char('q')) => break,
+            Event::Key(Key::Down) => write!(
+                stdout,
+                "{}{}Down",
+                termion::clear::All,
+                termion::cursor::Goto(1, 1)
+            )?,
+            Event::Key(Key::Up) => write!(
+                stdout,
+                "{}{}Up",
+                termion::clear::All,
+                termion::cursor::Goto(1, 1)
+            )?,
+            Event::Key(Key::Left) => write!(
+                stdout,
+                "{}{}Left",
+                termion::clear::All,
+                termion::cursor::Goto(1, 1)
+            )?,
+            Event::Key(Key::Right) => write!(
+                stdout,
+                "{}{}Right",
+                termion::clear::All,
+                termion::cursor::Goto(1, 1)
+            )?,
+            _ => {}
+        }
+        stdout.flush().unwrap();
     }
 
-    clear_terminal(&mut handle_stdout)?;
+    write!(
+        stdout,
+        "{}{}{}Bye\n",
+        termion::clear::All,
+        termion::cursor::Goto(1, 1),
+        termion::cursor::Show
+    )?;
 
     Ok(())
 }
