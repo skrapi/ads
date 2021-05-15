@@ -46,94 +46,112 @@ impl Question {
             "What is the time complexity for inserting an element at the head of a linked list?";
 
         format!(
-            "{}{}{}Question: {}\
-            {} {} 1. {}\
-            {} {} 2. {}\
-            {} {} 3. {}",
+            "{}{}Question: {}\n\r\
+             {} 1. {}\n\r\
+             {} 2. {}\n\r\
+             {} 3. {}",
             termion::clear::All,
-            termion::cursor::Hide,
             termion::cursor::Goto(1, 1),
             question,
-            termion::cursor::Goto(1, 2),
             selected_answer[0],
             possible_answers[0],
-            termion::cursor::Goto(1, 3),
             selected_answer[1],
             possible_answers[1],
-            termion::cursor::Goto(1, 4),
             selected_answer[2],
             possible_answers[2]
         )
     }
 }
 
-#[derive(PartialEq)]
-enum Area {
-    Greeting,
-    Testing,
-    Completed,
+#[derive(Debug, PartialEq, Copy, Clone)]
+enum State {
+    Entry,
+    Runtime,
     Exit,
+}
+
+#[derive(Debug, PartialEq)]
+enum Area {
+    Greeting(State),
+    Testing(State),
+    Completed(State),
+    Exit(State),
+}
+
+impl Area {
+    fn generate_output_string(&mut self, key: Key) -> String {
+        let mut output_string = String::new();
+        match self {
+            Area::Greeting(state) => match state {
+                State::Entry => {
+                    output_string = format!(
+                        "{}{}{}Hello, you have selected: {}\
+                                {}Use <q> to exit \
+                                {}Use arrow keys to move around\
+                                {}Press ENTER to begin",
+                        termion::clear::All,
+                        termion::cursor::Hide,
+                        termion::cursor::Goto(1, 1),
+                        TestType::All,
+                        termion::cursor::Goto(1, 2),
+                        termion::cursor::Goto(1, 3),
+                        termion::cursor::Goto(1, 4),
+                    );
+
+                    *self = Area::Greeting(State::Exit);
+                }
+                State::Runtime => match key {
+                    Key::Char('\n') => {
+                        output_string = Question::generate(Answer::One);
+                        *self = Area::Testing(State::Entry);
+                    }
+                    Key::Char('q') => *self = Area::Exit(State::Exit),
+                    _ => {}
+                },
+                State::Exit => *self = Area::Testing(State::Entry),
+            },
+            Area::Testing(_) => {
+                let mut current_answer = Answer::One;
+
+                match key {
+                    Key::Char('\n') => output_string = Question::generate(current_answer),
+                    Key::Down => {
+                        current_answer.increment();
+                        output_string = Question::generate(current_answer)
+                    }
+                    Key::Up => {
+                        current_answer.decrement();
+                        output_string = Question::generate(current_answer)
+                    }
+                    Key::Char('q') => *self = Area::Exit(State::Exit),
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
+        return output_string;
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdin_keys = termion::async_stdin().keys();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    let mut area = Area::Greeting;
+    let mut area = Area::Greeting(State::Entry);
 
-    let hello_message = format!(
-        "{}{}{}Hello, you have selected: {}\
-                    {}Use <q> to exit \
-                    {}Use arrow keys to move around\
-                    {}Press ENTER to begin",
-        termion::clear::All,
-        termion::cursor::Hide,
-        termion::cursor::Goto(1, 1),
-        TestType::All,
-        termion::cursor::Goto(1, 2),
-        termion::cursor::Goto(1, 3),
-        termion::cursor::Goto(1, 4),
-    );
-    write!(stdout, "{}", hello_message)?;
+    while area != Area::Exit(State::Exit) {
+        // Get input
+        let key = match stdin_keys.next() {
+            Some(Ok(key)) => key,
+            _ => Key::Null,
+        };
 
-    stdout.flush()?;
+        let output_string = area.generate_output_string(key);
 
-    while area != Area::Exit {
-        if let Some(Ok(key)) = stdin_keys.next() {
-            match area {
-                Area::Greeting => match key {
-                    Key::Char('\n') => {
-                        area = Area::Testing;
-                        write!(stdout, "{}", Question::generate(Answer::One))?;
-                        stdout.flush()?;
-                    }
-                    Key::Char('q') => area = Area::Exit,
-                    _ => {}
-                },
-                Area::Testing => {
-                    let mut current_answer = Answer::One;
-
-                    match key {
-                        Key::Char('\n') => {
-                            write!(stdout, "{}", Question::generate(current_answer))?
-                        }
-                        Key::Down => {
-                            current_answer.increment();
-                            write!(stdout, "{}", Question::generate(current_answer))?
-                        }
-                        Key::Up => {
-                            current_answer.decrement();
-                            write!(stdout, "{}", Question::generate(current_answer))?
-                        }
-                        Key::Char('q') => area = Area::Exit,
-                        _ => write!(stdout, "{:?}", key)?,
-                    }
-
-                    stdout.flush()?;
-                }
-                _ => {}
-            }
-        }
+        // print to output
+        write!(stdout, "{}", output_string)?;
+        stdout.flush()?;
 
         thread::sleep(time::Duration::from_millis(50));
     }
