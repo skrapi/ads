@@ -1,15 +1,15 @@
 mod answers;
-use core::{num, time};
 use std::{
-    env::set_current_dir,
+    fmt,
     io::{stdout, Write},
+    time,
 };
 use std::{fmt::Display, thread};
 
 use termion::event::Key;
 use termion::{input::TermRead, raw::IntoRawMode};
 
-use answers::{Answer, TimeComplexity};
+use answers::{Selection, TimeComplexity};
 
 /// Defines that type of test
 #[derive(Debug, PartialEq, Clone, Copy, PartialOrd)]
@@ -76,29 +76,31 @@ impl Display for TestType {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-struct Question {
-    correct_answer: Answer,
-    selected_answer: Answer,
+struct Question<T: fmt::Display> {
+    correct_answer: T,
+    selected_answer: Selection,
+    options: [T; 3],
 }
 
-impl Question {
-    fn new() -> Self {
+impl<T: fmt::Display> Question<T> {
+    fn new(correct_answer: T, options: [T; 3]) -> Self {
         Question {
-            correct_answer: Answer::One,
-            selected_answer: Answer::One,
+            correct_answer,
+            selected_answer: Selection::One,
+            options,
         }
     }
-    fn generate(self) -> String {
-        let possible_answers = vec![
-            TimeComplexity::ConstantTime,
-            TimeComplexity::LogarithmicTime,
-            TimeComplexity::LinearTime,
-        ];
+    fn generate(&self) -> String {
+        // let possible_answers = vec![
+        //     TimeComplexity::ConstantTime,
+        //     TimeComplexity::LogarithmicTime,
+        //     TimeComplexity::LinearTime,
+        // ];
 
         let selected_answer = match self.selected_answer {
-            Answer::One => [">", " ", " "],
-            Answer::Two => [" ", ">", " "],
-            Answer::Three => [" ", " ", ">"],
+            Selection::One => [">", " ", " "],
+            Selection::Two => [" ", ">", " "],
+            Selection::Three => [" ", " ", ">"],
         };
 
         let question =
@@ -113,11 +115,11 @@ impl Question {
             termion::cursor::Goto(1, 1),
             question,
             selected_answer[0],
-            possible_answers[0],
+            self.options[0],
             selected_answer[1],
-            possible_answers[1],
+            self.options[1],
             selected_answer[2],
-            possible_answers[2]
+            self.options[2]
         )
     }
 }
@@ -130,15 +132,18 @@ enum State {
 }
 
 #[derive(Debug, PartialEq)]
-enum Area {
+enum Area<T: fmt::Display> {
     Greeting(State),
     TestSelection(State, TestType),
-    Testing(State, usize, Vec<Question>),
+    Testing(State, usize, Vec<Question<T>>),
     Completed(State),
     Exit(State),
 }
 
-impl Area {
+impl<T> Area<T>
+where
+    T: fmt::Display,
+{
     fn generate_output_string(&mut self, key: Key) -> String {
         let mut output_string = String::new();
 
@@ -194,7 +199,7 @@ impl Area {
                             selection,
                         );
                         if key == Key::Char('\n') {
-                            *self = Area::Testing(State::Entry, 0, vec![Question::new(); 2])
+                            *self = Area::Testing(State::Entry, 0, Vec::new())
                         }
                     }
                 },
@@ -228,7 +233,7 @@ impl Area {
                     },
                     State::Exit => {
                         output_string = format!(
-                            "{}{}{:?}",
+                            "{}{}{}",
                             termion::clear::All,
                             termion::cursor::Goto(1, 1),
                             questions
@@ -250,7 +255,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     let mut area = Area::Greeting(State::Entry);
-    let mut questions = vec![Question::new(); 10];
 
     while area != Area::Exit(State::Exit) {
         // Get input

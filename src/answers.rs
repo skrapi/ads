@@ -16,27 +16,28 @@ impl Display for TimeComplexity {
         }
     }
 }
+
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Answer {
+pub enum Selection {
     One = 1,
     Two = 2,
     Three = 3,
 }
 
-impl Answer {
+impl Selection {
     pub fn increment(&mut self) {
         *self = match self {
-            Answer::One => Answer::Two,
-            Answer::Two => Answer::Three,
-            Answer::Three => Answer::Three,
+            Selection::One => Selection::Two,
+            Selection::Two => Selection::Three,
+            Selection::Three => Selection::Three,
         }
     }
 
     pub fn decrement(&mut self) {
         *self = match self {
-            Answer::One => Answer::One,
-            Answer::Two => Answer::One,
-            Answer::Three => Answer::Two,
+            Selection::One => Selection::One,
+            Selection::Two => Selection::One,
+            Selection::Three => Selection::Two,
         }
     }
 }
