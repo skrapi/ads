@@ -1,20 +1,68 @@
 mod answers;
-use core::time;
-use std::io::{stdin, stdout, Write};
+use core::{num, time};
+use std::{
+    env::set_current_dir,
+    io::{stdout, Write},
+};
 use std::{fmt::Display, thread};
 
-use termion::event::{Event, Key};
-use termion::input::{MouseTerminal, TermRead};
-use termion::raw::IntoRawMode;
+use termion::event::Key;
+use termion::{input::TermRead, raw::IntoRawMode};
 
 use answers::{Answer, TimeComplexity};
 
 /// Defines that type of test
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone, Copy, PartialOrd)]
 enum TestType {
     /// Selects all tests
     All,
     LinkedLists,
+    HashTables,
+}
+
+impl TestType {
+    fn list_all() -> Vec<TestType> {
+        vec![TestType::All, TestType::LinkedLists, TestType::HashTables]
+    }
+    fn generate(selection: TestType) -> String {
+        let possible_answers = TestType::list_all();
+
+        let selected_answer = match selection {
+            TestType::All => [">", " ", " "],
+            TestType::LinkedLists => [" ", ">", " "],
+            TestType::HashTables => [" ", " ", ">"],
+        };
+
+        format!(
+            "{}{}Which test would you like to take? \n\r\
+             {} 1. {}\n\r\
+             {} 2. {}\n\r\
+             {} 3. {}",
+            termion::clear::All,
+            termion::cursor::Goto(1, 1),
+            selected_answer[0],
+            possible_answers[0],
+            selected_answer[1],
+            possible_answers[1],
+            selected_answer[2],
+            possible_answers[2]
+        )
+    }
+    fn increment(&mut self) {
+        *self = match self {
+            TestType::All => TestType::LinkedLists,
+            TestType::LinkedLists => TestType::HashTables,
+            TestType::HashTables => TestType::HashTables,
+        }
+    }
+
+    fn decrement(&mut self) {
+        *self = match self {
+            TestType::All => TestType::All,
+            TestType::LinkedLists => TestType::All,
+            TestType::HashTables => TestType::LinkedLists,
+        }
+    }
 }
 
 impl Display for TestType {
@@ -22,21 +70,32 @@ impl Display for TestType {
         match self {
             TestType::All => write!(f, "Test all subject matter"),
             TestType::LinkedLists => write!(f, "Testing linked list knowledge"),
+            TestType::HashTables => write!(f, "Testing hash table knowledge"),
         }
     }
 }
 
-struct Question;
+#[derive(Debug, PartialEq, Clone, Copy)]
+struct Question {
+    correct_answer: Answer,
+    selected_answer: Answer,
+}
 
 impl Question {
-    fn generate(selection: Answer) -> String {
+    fn new() -> Self {
+        Question {
+            correct_answer: Answer::One,
+            selected_answer: Answer::One,
+        }
+    }
+    fn generate(self) -> String {
         let possible_answers = vec![
             TimeComplexity::ConstantTime,
             TimeComplexity::LogarithmicTime,
             TimeComplexity::LinearTime,
         ];
 
-        let selected_answer = match selection {
+        let selected_answer = match self.selected_answer {
             Answer::One => [">", " ", " "],
             Answer::Two => [" ", ">", " "],
             Answer::Three => [" ", " ", ">"],
@@ -73,7 +132,8 @@ enum State {
 #[derive(Debug, PartialEq)]
 enum Area {
     Greeting(State),
-    Testing(State),
+    TestSelection(State, TestType),
+    Testing(State, usize, Vec<Question>),
     Completed(State),
     Exit(State),
 }
@@ -81,55 +141,106 @@ enum Area {
 impl Area {
     fn generate_output_string(&mut self, key: Key) -> String {
         let mut output_string = String::new();
-        match self {
-            Area::Greeting(state) => match state {
-                State::Entry => {
-                    output_string = format!(
-                        "{}{}{}Hello, you have selected: {}\
-                                {}Use <q> to exit \
-                                {}Use arrow keys to move around\
-                                {}Press ENTER to begin",
-                        termion::clear::All,
-                        termion::cursor::Hide,
-                        termion::cursor::Goto(1, 1),
-                        TestType::All,
-                        termion::cursor::Goto(1, 2),
-                        termion::cursor::Goto(1, 3),
-                        termion::cursor::Goto(1, 4),
-                    );
 
-                    *self = Area::Greeting(State::Exit);
-                }
-                State::Runtime => match key {
-                    Key::Char('\n') => {
-                        output_string = Question::generate(Answer::One);
-                        *self = Area::Testing(State::Entry);
+        if key == Key::Char('q') {
+            *self = Area::Exit(State::Exit);
+        } else {
+            match self {
+                Area::Greeting(state) => match state {
+                    State::Entry => {
+                        output_string = format!(
+                            "{}{}{}Hello, welcome to testing\n\r\
+                            Use <q> to exit \n\r\
+                            Use arrow keys to move around\n\r\
+                            Press ENTER to begin",
+                            termion::clear::All,
+                            termion::cursor::Hide,
+                            termion::cursor::Goto(1, 1),
+                        );
+
+                        *self = Area::Greeting(State::Runtime);
                     }
-                    Key::Char('q') => *self = Area::Exit(State::Exit),
-                    _ => {}
+                    State::Runtime => match key {
+                        Key::Char('\n') => {
+                            *self = Area::Greeting(State::Exit);
+                        }
+                        _ => {}
+                    },
+                    State::Exit => *self = Area::TestSelection(State::Entry, TestType::All),
                 },
-                State::Exit => *self = Area::Testing(State::Entry),
-            },
-            Area::Testing(_) => {
-                let mut current_answer = Answer::One;
-
-                match key {
-                    Key::Char('\n') => output_string = Question::generate(current_answer),
-                    Key::Down => {
-                        current_answer.increment();
-                        output_string = Question::generate(current_answer)
+                Area::TestSelection(state, selection) => match state {
+                    State::Entry => {
+                        output_string = TestType::generate(*selection);
+                        *state = State::Runtime
                     }
-                    Key::Up => {
-                        current_answer.decrement();
-                        output_string = Question::generate(current_answer)
+                    State::Runtime => match key {
+                        Key::Char('\n') => *state = State::Exit,
+                        Key::Down => {
+                            selection.increment();
+                            output_string = TestType::generate(*selection);
+                        }
+                        Key::Up => {
+                            selection.decrement();
+                            output_string = TestType::generate(*selection);
+                        }
+                        _ => {}
+                    },
+                    State::Exit => {
+                        output_string = format!(
+                            "{}{}Hello, you have selected: {}\n\r\
+                            Press ENTER to begin",
+                            termion::clear::All,
+                            termion::cursor::Goto(1, 1),
+                            selection,
+                        );
+                        if key == Key::Char('\n') {
+                            *self = Area::Testing(State::Entry, 0, vec![Question::new(); 2])
+                        }
                     }
-                    Key::Char('q') => *self = Area::Exit(State::Exit),
-                    _ => {}
-                }
+                },
+                Area::Testing(state, current_question_index, questions) => match state {
+                    State::Entry => {
+                        output_string = questions[*current_question_index].generate();
+                        *state = State::Runtime
+                    }
+                    State::Runtime => match key {
+                        Key::Char('\n') => {
+                            *current_question_index += 1;
+                            if *current_question_index < questions.len() {
+                                output_string = questions[*current_question_index].generate();
+                            } else {
+                                *state = State::Exit;
+                            }
+                        }
+                        Key::Down => {
+                            questions[*current_question_index]
+                                .selected_answer
+                                .increment();
+                            output_string = questions[*current_question_index].generate();
+                        }
+                        Key::Up => {
+                            questions[*current_question_index]
+                                .selected_answer
+                                .decrement();
+                            output_string = questions[*current_question_index].generate();
+                        }
+                        _ => {}
+                    },
+                    State::Exit => {
+                        output_string = format!(
+                            "{}{}{:?}",
+                            termion::clear::All,
+                            termion::cursor::Goto(1, 1),
+                            questions
+                        );
+                        if key == Key::Char('\n') {
+                            *self = Area::Exit(State::Exit);
+                        }
+                    }
+                },
+                _ => {}
             }
-            _ => {}
         }
-
         return output_string;
     }
 }
@@ -139,6 +250,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     let mut area = Area::Greeting(State::Entry);
+    let mut questions = vec![Question::new(); 10];
 
     while area != Area::Exit(State::Exit) {
         // Get input

@@ -16,7 +16,7 @@ impl Display for TimeComplexity {
         }
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Answer {
     One = 1,
     Two = 2,
