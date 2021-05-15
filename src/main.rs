@@ -7,12 +7,10 @@ use termion::event::{Event, Key};
 use termion::input::{MouseTerminal, TermRead};
 use termion::raw::IntoRawMode;
 
-use structopt::StructOpt;
-
 use answers::{Answer, TimeComplexity};
 
 /// Defines that type of test
-#[derive(Debug, StructOpt)]
+#[derive(Debug)]
 enum TestType {
     /// Selects all tests
     All,
@@ -78,7 +76,6 @@ enum Area {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let args = TestType::from_args();
     let mut stdin_keys = termion::async_stdin().keys();
     let mut stdout = stdout().into_raw_mode().unwrap();
 

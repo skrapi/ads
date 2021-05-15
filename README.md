@@ -24,3 +24,15 @@ Specific, Measurable, Achievable, Realistic, and Timely.
 ## Algorithms
 - [ ] Recursion
 - [ ] Binary Search
+
+
+## Control Flow
+
+Inputs: Stdin
+Outputs: Stdout
+
+States: Greeting, Test Selection, Testing, Results, Exit
+
+Each state needs to handle the input `Key` and output a `String` to write to output
+
+Each state also needs a state entry, state runtime and state exit
