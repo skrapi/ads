@@ -1,6 +1,7 @@
 mod answers;
-use std::fmt::Display;
+use core::time;
 use std::io::{stdin, stdout, Write};
+use std::{fmt::Display, thread};
 
 use termion::event::{Event, Key};
 use termion::input::{MouseTerminal, TermRead};
@@ -77,8 +78,8 @@ enum Area {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = TestType::from_args();
-    let mut stdin = termion::async_stdin().keys();
+    // let args = TestType::from_args();
+    let mut stdin_keys = termion::async_stdin().keys();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     let mut area = Area::Greeting;
@@ -91,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         termion::clear::All,
         termion::cursor::Hide,
         termion::cursor::Goto(1, 1),
-        args,
+        TestType::All,
         termion::cursor::Goto(1, 2),
         termion::cursor::Goto(1, 3),
         termion::cursor::Goto(1, 4),
@@ -101,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stdout.flush()?;
 
     while area != Area::Exit {
-        if let Some(Ok(key)) = stdin.next() {
+        if let Some(Ok(key)) = stdin_keys.next() {
             match area {
                 Area::Greeting => match key {
                     Key::Char('\n') => {
@@ -136,6 +137,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             }
         }
+
+        thread::sleep(time::Duration::from_millis(50));
     }
     // Clean up
 
