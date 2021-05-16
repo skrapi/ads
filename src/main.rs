@@ -75,28 +75,24 @@ impl Display for TestType {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-struct Question<T: fmt::Display> {
-    correct_answer: T,
+#[derive(Debug, PartialEq, Clone)]
+struct Question {
+    question: String,
+    correct_answer: TimeComplexity,
     selected_answer: Selection,
-    options: [T; 3],
+    options: [TimeComplexity; 3],
 }
 
-impl<T: fmt::Display> Question<T> {
-    fn new(correct_answer: T, options: [T; 3]) -> Self {
+impl Question {
+    fn new(question: String, correct_answer: TimeComplexity, options: [TimeComplexity; 3]) -> Self {
         Question {
+            question,
             correct_answer,
             selected_answer: Selection::One,
             options,
         }
     }
     fn generate(&self) -> String {
-        // let possible_answers = vec![
-        //     TimeComplexity::ConstantTime,
-        //     TimeComplexity::LogarithmicTime,
-        //     TimeComplexity::LinearTime,
-        // ];
-
         let selected_answer = match self.selected_answer {
             Selection::One => [">", " ", " "],
             Selection::Two => [" ", ">", " "],
@@ -132,18 +128,15 @@ enum State {
 }
 
 #[derive(Debug, PartialEq)]
-enum Area<T: fmt::Display> {
+enum Area {
     Greeting(State),
     TestSelection(State, TestType),
-    Testing(State, usize, Vec<Question<T>>),
+    Testing(State, usize, Vec<Question>),
     Completed(State),
     Exit(State),
 }
 
-impl<T> Area<T>
-where
-    T: fmt::Display,
-{
+impl Area {
     fn generate_output_string(&mut self, key: Key) -> String {
         let mut output_string = String::new();
 
@@ -237,6 +230,9 @@ where
                             termion::clear::All,
                             termion::cursor::Goto(1, 1),
                             questions
+                                .iter()
+                                .map(|x| x.selected_answer)
+                                .collect::<Selection>()
                         );
                         if key == Key::Char('\n') {
                             *self = Area::Exit(State::Exit);

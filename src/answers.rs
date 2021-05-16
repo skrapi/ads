@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 /// Types of time complexity
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TimeComplexity {
     ConstantTime,
     LinearTime,
@@ -22,6 +23,12 @@ pub enum Selection {
     One = 1,
     Two = 2,
     Three = 3,
+}
+
+impl Display for Selection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", *self as usize)
+    }
 }
 
 impl Selection {
