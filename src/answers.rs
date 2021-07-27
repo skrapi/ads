@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, iter::FromIterator};
 
 /// Types of time complexity
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -24,6 +24,7 @@ pub enum Selection {
     Two = 2,
     Three = 3,
 }
+
 
 impl Display for Selection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -192,7 +192,7 @@ impl Area {
                             selection,
                         );
                         if key == Key::Char('\n') {
-                            *self = Area::Testing(State::Entry, 0, Vec::new())
+                            *self = Area::Testing(State::Entry, 0, Vec::with_capacity(10))
                         }
                     }
                 },
@@ -226,13 +226,13 @@ impl Area {
                     },
                     State::Exit => {
                         output_string = format!(
-                            "{}{}{}",
+                            "{}{}{:?}",
                             termion::clear::All,
                             termion::cursor::Goto(1, 1),
                             questions
-                                .iter()
-                                .map(|x| x.selected_answer)
-                                .collect::<Selection>()
+                                 .iter()
+                                 .map(|x| x.selected_answer)
+                                 .collect::<Vec<Selection>>()
                         );
                         if key == Key::Char('\n') {
                             *self = Area::Exit(State::Exit);
